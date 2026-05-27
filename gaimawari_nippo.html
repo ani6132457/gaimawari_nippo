@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>外回り日報管理システム</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F5F4F0;--surface:#FFFFFF;--surface2:#FAFAF8;
+  --border:#E2E0D8;--border2:#D0CEC4;
+  --text:#1A1916;--text2:#6B6960;--text3:#9B9A94;
+  --purple:#5B4FCF;--purple-light:#EEF0FF;--purple-border:#C8CAFF;
+  --teal:#0E7C65;--teal-light:#E6F5F1;--teal-border:#9FDDD0;
+  --amber:#C47C0A;--amber-light:#FEF7E6;--amber-border:#F5CCA0;
+  --green:#1A7A4A;--green-light:#E8F7EE;
+  --radius:10px;--shadow:0 1px 3px rgba(0,0,0,0.08),0 4px 12px rgba(0,0,0,0.04);
+}
+body{font-family:'Meiryo','Yu Gothic',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.app-name{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.3px}
+.role-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.role-admin{background:var(--purple-light);color:var(--purple);border:1px solid var(--purple-border)}
+.role-staff{background:var(--teal-light);color:var(--teal);border:1px solid var(--teal-border)}
+.btn{padding:6px 14px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:all .15s;font-family:inherit}
+.btn:hover{background:var(--surface2);border-color:var(--border2)}
+.btn-primary{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn-primary:hover{background:#4A3EBE}
+.btn-teal{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn-teal:hover{background:#0A6555}
+.btn-sm{padding:4px 10px;font-size:12px}
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:200px;background:var(--surface);border-right:1px solid var(--border);padding:12px 8px;flex-shrink:0;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--purple-light);color:var(--purple);font-weight:500}
+.nav-item.active.teal{background:var(--teal-light);color:var(--teal)}
+.nav-label{font-size:11px;color:var(--text3);padding:8px 12px 4px;font-weight:500;letter-spacing:0.5px}
+.content{flex:1;overflow-y:auto;padding:20px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card-title{font-size:14px;font-weight:700;margin-bottom:12px}
+.page-title{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.stat-val{font-size:24px;font-weight:700;line-height:1}
+.stat-label{font-size:11px;color:var(--text3);margin-top:4px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:8px 12px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500}
+.tag-delivery{background:var(--teal-light);color:var(--teal)}
+.tag-pickup{background:var(--amber-light);color:var(--amber)}
+.tag-bring{background:var(--purple-light);color:var(--purple)}
+.tag-done{background:var(--green-light);color:var(--green)}
+.tag-pending{background:var(--amber-light);color:var(--amber)}
+.route-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.staff-lane{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;min-height:180px;box-shadow:var(--shadow)}
+.staff-lane.drag-over{background:var(--purple-light);border-color:var(--purple-border)}
+.staff-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.customer-chip{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;margin-bottom:6px;cursor:grab;font-size:12px;display:flex;align-items:center;justify-content:space-between;transition:all .15s;user-select:none}
+.customer-chip:hover{border-color:var(--border2);box-shadow:0 2px 6px rgba(0,0,0,0.08)}
+.customer-chip.dragging{opacity:0.4}
+.chip-addr{font-size:11px;color:var(--text3);margin-top:2px}
+.unassigned-pool{background:var(--surface2);border:2px dashed var(--border2);border-radius:var(--radius);padding:12px;margin-bottom:12px}
+.unassigned-pool.drag-over{background:var(--purple-light);border-color:var(--purple-border)}
+.visit-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.visit-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--amber)}
+.visit-card.done::before{background:var(--green)}
+.visit-name{font-weight:700;font-size:14px;margin-bottom:4px}
+.visit-addr{font-size:12px;color:var(--text3);margin-bottom:8px}
+.type-select{padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-size:12px;background:var(--surface);cursor:pointer;font-family:inherit}
+.note-input{width:100%;margin-top:8px;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;background:var(--surface2);resize:none;color:var(--text)}
+.note-input:focus{outline:none;border-color:var(--teal)}
+.check-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;border:1px solid var(--teal-border);background:var(--teal-light);color:var(--teal);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.check-btn:hover{background:var(--teal);color:#fff}
+.check-btn.done{background:var(--green-light);border-color:#9FD9BC;color:var(--green)}
+.order-num{width:22px;height:22px;border-radius:50%;background:var(--purple-light);color:var(--purple);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.role-switch{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:8px;border:1px solid var(--border)}
+.role-btn{padding:4px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--text2);transition:all .15s;font-family:inherit}
+.role-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.empty{text-align:center;padding:20px;color:var(--text3);font-size:13px}
+.date-chip{font-size:12px;background:var(--surface2);border:1px solid var(--border);padding:3px 9px;border-radius:6px;color:var(--text2)}
+input[type=date],select.filter-select{padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);outline:none}
+.form-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.label{font-size:12px;color:var(--text2);min-width:60px}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:2px;transition:width .3s}
+.guide{background:var(--purple-light);border:1px solid var(--purple-border);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--purple)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="app-name">📋 外回り日報</div>
+      <span class="role-badge role-admin" id="roleBadge">管理者</span>
+      <span class="date-chip" id="todayDate"></span>
+    </div>
+    <div class="topbar-right">
+      <div class="role-switch">
+        <button class="role-btn active" onclick="switchRole('admin')">管理者</button>
+        <button class="role-btn" onclick="switchRole('staff')">担当者</button>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<script>
+// === データ ===
+const today = new Date();
+document.getElementById('todayDate').textContent = today.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+
+const STAFF = [
+  {id:1,name:'田中 健太',color:'#5B4FCF',initial:'田'},
+  {id:2,name:'鈴木 美咲',color:'#0E7C65',initial:'鈴'},
+  {id:3,name:'山田 太郎',color:'#C47C0A',initial:'山'},
+  {id:4,name:'佐藤 花子',color:'#C13A35',initial:'佐'},
+  {id:5,name:'伊藤 誠',color:'#1A5FA0',initial:'伊'},
+  {id:6,name:'渡辺 由美',color:'#7C3A8A',initial:'渡'},
+];
+
+const CUSTOMERS = [
+  {id:1,name:'丸山商事',address:'名古屋市中区栄2-8-5',type:'delivery'},
+  {id:2,name:'鈴木製作所',address:'名古屋市熱田区神宮1-4-2',type:'pickup'},
+  {id:3,name:'名古屋書店',address:'名古屋市東区泉1-12-3',type:'delivery'},
+  {id:4,name:'大塚医院',address:'名古屋市昭和区山里町8',type:'delivery'},
+  {id:5,name:'青山クリーニング',address:'名古屋市瑞穂区弥富通2-14',type:'bring'},
+  {id:6,name:'田辺食品',address:'名古屋市西区城西4-17',type:'pickup'},
+  {id:7,name:'中央薬局',address:'名古屋市中村区太閤通3-5',type:'delivery'},
+  {id:8,name:'北川設備',address:'名古屋市北区辻町3-20',type:'bring'},
+  {id:9,name:'山本工業',address:'名古屋市守山区金屋1-2',type:'pickup'},
+  {id:10,name:'西村商会',address:'名古屋市緑区大高町5-8',type:'delivery'},
+  {id:11,name:'東海印刷',address:'名古屋市千種区四谷通2-6',type:'delivery'},
+  {id:12,name:'岡田医療品',address:'名古屋市港区港明2-9',type:'pickup'},
+];
+
+const assignments = {1:[1,4,7], 2:[2,6,9], 3:[3,5], 4:[8,11], 5:[10,12], 6:[]};
+const records = {};
+CUSTOMERS.forEach(c => { records[c.id] = {type:c.type, note:'', done:false}; });
+
+let currentRole = 'admin';
+let currentStaffId = 1;
+
+// === ロール切替 ===
+function switchRole(role) {
+  currentRole = role;
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.toggle('active', b.textContent === (role==='admin'?'管理者':'担当者')));
+  const badge = document.getElementById('roleBadge');
+  badge.textContent = role==='admin' ? '管理者' : '担当者';
+  badge.className = 'role-badge ' + (role==='admin' ? 'role-admin' : 'role-staff');
+  renderSidebar();
+  showPage(role==='admin' ? 'dashboard' : 'myroute');
+}
+
+// === サイドバー ===
+function renderSidebar() {
+  const sb = document.getElementById('sidebar');
+  if (currentRole === 'admin') {
+    sb.innerHTML = `
+      <div class="nav-label">メイン</div>
+      <button class="nav-item" onclick="showPage('dashboard')">📊 ダッシュボード</button>
+      <button class="nav-item" onclick="showPage('route')">🗺️ ルート割り当て</button>
+      <button class="nav-item" onclick="showPage('reports')">📋 日報一覧</button>
+      <div class="nav-label" style="margin-top:8px">マスタ</div>
+      <button class="nav-item" onclick="showPage('customers')">👥 顧客マスタ</button>
+      <button class="nav-item" onclick="showPage('staffmgr')">👤 担当者管理</button>
+    `;
+  } else {
+    sb.innerHTML = `
+      <div class="nav-label">担当者を選択</div>
+      ${STAFF.map(s => `<button class="nav-item${s.id===currentStaffId?' active teal':''}" onclick="selectStaff(${s.id})">${s.initial} ${s.name.split(' ')[1]}</button>`).join('')}
+    `;
+  }
+}
+
+function selectStaff(id) {
+  currentStaffId = id;
+  renderSidebar();
+  showPage('myroute');
+}
+
+// === ページ表示 ===
+function showPage(name) {
+  const content = document.getElementById('content');
+  if (name==='dashboard') content.innerHTML = buildDashboard();
+  else if (name==='route') { content.innerHTML = buildRoute(); initDragDrop(); }
+  else if (name==='reports') content.innerHTML = buildReports();
+  else if (name==='customers') content.innerHTML = buildCustomers();
+  else if (name==='staffmgr') content.innerHTML = buildStaffMgr();
+  else if (name==='myroute') content.innerHTML = buildMyRoute();
+}
+
+// === ダッシュボード ===
+function buildDashboard() {
+  const total = CUSTOMERS.length;
+  const done = Object.values(records).filter(r => r.done).length;
+  const pct = Math.round(done/total*100);
+  return `
+  <div class="guide">💡 <strong>管理者画面 - ダッシュボード</strong>：全体の進捗状況が確認できます。左のメニューで画面を切り替えてください。</div>
+  <div class="page-title">ダッシュボード <span class="date-chip">${today.toLocaleDateString('ja-JP',{month:'long',day:'numeric',weekday:'short'})}</span></div>
+  <div class="stat-row">
+    <div class="stat"><div class="stat-val">${total}</div><div class="stat-label">本日の訪問先</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--green)">${done}</div><div class="stat-label">完了</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--amber)">${total-done}</div><div class="stat-label">未完了</div></div>
+    <div class="stat"><div class="stat-val">${pct}%</div><div class="stat-label">進捗率</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📈 担当者別進捗</div>
+    ${STAFF.map(s => {
+      const ids = assignments[s.id]||[];
+      const d = ids.filter(id => records[id]?.done).length;
+      const p = ids.length ? Math.round(d/ids.length*100) : 0;
+      return `<div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div class="avatar" style="background:${s.color}">${s.initial}</div>
+          <span style="font-size:13px;font-weight:500">${s.name}</span>
+          <span style="font-size:12px;color:var(--text3);margin-left:auto">${d}/${ids.length}件 (${p}%)</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${p}%;background:${s.color}"></div></div>
+      </div>`;
+    }).join('')}
+  </div>
+  <div class="card">
+    <div class="card-title">📋 本日の訪問先一覧</div>
+    <table>
+      <thead><tr><th>顧客名</th><th>担当者</th><th>種別</th><th>ステータス</th></tr></thead>
+      <tbody>
+        ${CUSTOMERS.map(c => {
+          const rec = records[c.id];
+          const staffId = Object.entries(assignments).find(([,ids])=>ids.includes(c.id))?.[0];
+          const staffName = staffId ? STAFF.find(s=>s.id==staffId)?.name : '未割当';
+          return `<tr>
+            <td style="font-weight:500">${c.name}</td>
+            <td style="color:var(--text2)">${staffName}</td>
+            <td><span class="tag tag-${rec.type}">${rec.type==='delivery'?'配達':rec.type==='pickup'?'引取':'持込'}</span></td>
+            <td><span class="tag ${rec.done?'tag-done':'tag-pending'}">${rec.done?'✅ 完了':'⏳ 未完了'}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// === ルート割り当て ===
+function buildRoute() {
+  const unassigned = CUSTOMERS.filter(c => !Object.values(assignments).flat().includes(c.id));
+  return `
+  <div class="guide">💡 <strong>ルート割り当て</strong>：顧客カードを担当者のエリアへ<strong>ドラッグ＆ドロップ</strong>して割り当てられます。</div>
+  <div class="page-title">ルート割り当て <button class="btn btn-primary btn-sm" onclick="saveRoute(this)">💾 保存</button></div>
+  ${unassigned.length ? `
+  <div class="unassigned-pool" id="pool">
+    <div style="font-size:12px;font-weight:500;color:var(--text3);margin-bottom:8px">📦 未割当の顧客（ここからドラッグして割り当て）</div>
+    ${unassigned.map(c => chipHTML(c, null)).join('')}
+  </div>` : ''}
+  <div class="route-grid">
+    ${STAFF.map(s => `
+      <div class="staff-lane" id="lane-${s.id}" data-staff="${s.id}">
+        <div class="staff-header">
+          <div class="avatar" style="background:${s.color}">${s.initial}</div>
+          <div>
+            <div style="font-size:13px;font-weight:700">${s.name}</div>
+            <div style="font-size:11px;color:var(--text3)">${(assignments[s.id]||[]).length}件</div>
+          </div>
+        </div>
+        ${(assignments[s.id]||[]).map((id,i) => {
+          const c = CUSTOMERS.find(x=>x.id===id);
+          return c ? chipHTML(c, i+1) : '';
+        }).join('')}
+        ${!(assignments[s.id]||[]).length ? '<div class="empty">ここにドロップ</div>' : ''}
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function chipHTML(c, orderNum) {
+  return `<div class="customer-chip" draggable="true" data-id="${c.id}">
+    <div style="display:flex;align-items:center;gap:6px">
+      ${orderNum ? `<div class="order-num">${orderNum}</div>` : ''}
+      <div><div style="font-weight:500">${c.name}</div><div class="chip-addr">${c.address}</div></div>
+    </div>
+    <span class="tag tag-${c.type}">${c.type==='delivery'?'配達':c.type==='pickup'?'引取':'持込'}</span>
+  </div>`;
+}
+
+function initDragDrop() {
+  let dragId = null;
+  document.querySelectorAll('[draggable=true]').forEach(el => {
+    el.addEventListener('dragstart', () => { dragId = parseInt(el.dataset.id); setTimeout(()=>el.classList.add('dragging'),0); });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+  });
+  const zones = [...document.querySelectorAll('.staff-lane, #pool')].filter(Boolean);
+  zones.forEach(zone => {
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('drag-over');
+      if (!dragId) return;
+      STAFF.forEach(s => { assignments[s.id] = (assignments[s.id]||[]).filter(id=>id!==dragId); });
+      const staffId = parseInt(zone.dataset.staff);
+      if (staffId) { if(!assignments[staffId]) assignments[staffId]=[]; assignments[staffId].push(dragId); }
+      showPage('route');
+    });
+  });
+}
+
+function saveRoute(btn) {
+  btn.textContent = '✅ 保存しました';
+  btn.style.background = 'var(--green)';
+  setTimeout(()=>{btn.textContent='💾 保存';btn.style.background='';},2000);
+}
+
+// === 日報一覧 ===
+function buildReports() {
+  return `
+  <div class="guide">💡 <strong>日報一覧</strong>：日付・担当者で絞り込んで全員の記録を確認できます。</div>
+  <div class="page-title">日報一覧</div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="form-row">
+      <span class="label">日付</span>
+      <input type="date" value="${today.toISOString().slice(0,10)}">
+      <span class="label" style="margin-left:8px">担当者</span>
+      <select class="filter-select"><option>全員</option>${STAFF.map(s=>`<option>${s.name}</option>`).join('')}</select>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto">絞り込み</button>
+    </div>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>訪問先</th><th>担当者</th><th>種別</th><th>内容メモ</th><th>ステータス</th></tr></thead>
+      <tbody>
+        ${CUSTOMERS.map(c => {
+          const rec = records[c.id];
+          const staffId = Object.entries(assignments).find(([,ids])=>ids.includes(c.id))?.[0];
+          const staffName = staffId ? STAFF.find(s=>s.id==staffId)?.name : '未割当';
+          return `<tr>
+            <td><div style="font-weight:500">${c.name}</div><div style="font-size:11px;color:var(--text3)">${c.address}</div></td>
+            <td style="color:var(--text2)">${staffName}</td>
+            <td><span class="tag tag-${rec.type}">${rec.type==='delivery'?'配達':rec.type==='pickup'?'引取':'持込'}</span></td>
+            <td style="color:var(--text2);font-size:12px">${rec.note||'—'}</td>
+            <td><span class="tag ${rec.done?'tag-done':'tag-pending'}">${rec.done?'✅ 完了':'⏳ 未完了'}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// === 顧客マスタ ===
+function buildCustomers() {
+  return `
+  <div class="guide">💡 <strong>顧客マスタ</strong>：顧客名・住所・通常種別を管理します。実際のシステムではここで追加・編集ができます。</div>
+  <div class="page-title">顧客マスタ <button class="btn btn-primary btn-sm">＋ 追加</button></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>顧客名</th><th>住所</th><th>通常種別</th><th>担当者</th></tr></thead>
+      <tbody>
+        ${CUSTOMERS.map(c => {
+          const staffId = Object.entries(assignments).find(([,ids])=>ids.includes(c.id))?.[0];
+          const staff = staffId ? STAFF.find(s=>s.id==staffId) : null;
+          return `<tr>
+            <td style="font-weight:500">${c.name}</td>
+            <td style="color:var(--text2);font-size:12px">${c.address}</td>
+            <td><span class="tag tag-${c.type}">${c.type==='delivery'?'配達':c.type==='pickup'?'引取':'持込'}</span></td>
+            <td>${staff
+              ? `<div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="background:${staff.color};width:20px;height:20px;font-size:9px">${staff.initial}</div>${staff.name}</div>`
+              : '<span style="color:var(--text3)">未割当</span>'
+            }</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// === 担当者管理 ===
+function buildStaffMgr() {
+  return `
+  <div class="guide">💡 <strong>担当者管理</strong>：担当者の一覧と本日の進捗状況です。</div>
+  <div class="page-title">担当者管理 <button class="btn btn-primary btn-sm">＋ 追加</button></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>担当者</th><th>本日の件数</th><th>完了件数</th><th>進捗</th></tr></thead>
+      <tbody>
+        ${STAFF.map(s => {
+          const ids = assignments[s.id]||[];
+          const done = ids.filter(id=>records[id]?.done).length;
+          const pct = ids.length ? Math.round(done/ids.length*100) : 0;
+          return `<tr>
+            <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:${s.color}">${s.initial}</div><span style="font-weight:500">${s.name}</span></div></td>
+            <td>${ids.length}件</td>
+            <td><span style="color:var(--green);font-weight:500">${done}</span> / ${ids.length}</td>
+            <td style="min-width:100px"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${s.color}"></div></div></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// === Googleマップ URL生成 ===
+function buildGoogleMapsUrl(customers) {
+  if (!customers.length) return null;
+  // 1件だけの場合は検索
+  if (customers.length === 1) {
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(customers[0].address + ' 名古屋市');
+  }
+  // 複数件：最初を出発地、最後を目的地、間を経由地に
+  const origin = encodeURIComponent(customers[0].address);
+  const destination = encodeURIComponent(customers[customers.length-1].address);
+  const waypoints = customers.slice(1, -1).map(c => encodeURIComponent(c.address)).join('|');
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+  if (waypoints) url += `&waypoints=${waypoints}`;
+  return url;
+}
+
+function openGoogleMaps() {
+  const myIds = assignments[currentStaffId]||[];
+  const myCustomers = myIds.map(id=>CUSTOMERS.find(c=>c.id===id)).filter(Boolean);
+  const url = buildGoogleMapsUrl(myCustomers);
+  if (url) window.open(url, '_blank');
+}
+
+function copyMapUrl() {
+  const myIds = assignments[currentStaffId]||[];
+  const myCustomers = myIds.map(id=>CUSTOMERS.find(c=>c.id===id)).filter(Boolean);
+  const url = buildGoogleMapsUrl(myCustomers);
+  if (!url) return;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copyUrlBtn');
+    btn.textContent = '✅ コピーしました！';
+    btn.style.background = 'var(--green)';
+    btn.style.color = '#fff';
+    setTimeout(()=>{ btn.textContent='🔗 URLをコピー'; btn.style.background=''; btn.style.color=''; }, 2000);
+  });
+}
+
+// === 担当者ルート画面 ===
+function buildMyRoute() {
+  const staff = STAFF.find(s=>s.id===currentStaffId);
+  const myIds = assignments[currentStaffId]||[];
+  const myCustomers = myIds.map(id=>CUSTOMERS.find(c=>c.id===id)).filter(Boolean);
+  const done = myIds.filter(id=>records[id]?.done).length;
+  const pct = myCustomers.length ? Math.round(done/myCustomers.length*100) : 0;
+  return `
+  <div class="guide">💡 <strong>担当者画面</strong>：左から名前を選んで、訪問先ごとに種別・メモを入力し「完了にする」を押してください。</div>
+  <div style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="avatar" style="background:${staff.color};width:32px;height:32px;font-size:14px">${staff.initial}</div>
+        <span style="font-size:18px;font-weight:700">${staff.name} の本日ルート</span>
+      </div>
+      <span style="font-size:13px;color:var(--text3)">${done}/${myCustomers.length}件完了 (${pct}%)</span>
+    </div>
+    <div class="progress-bar" style="height:6px"><div class="progress-fill" style="width:${pct}%;background:${staff.color}"></div></div>
+  </div>
+
+  ${myCustomers.length>0 ? `
+  <div class="card" style="margin-bottom:14px;background:var(--teal-light);border-color:var(--teal-border)">
+    <div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:10px">🗺️ Googleマップでルートを確認</div>
+    <div style="font-size:12px;color:var(--teal);margin-bottom:10px;opacity:0.8">
+      ${myCustomers.map((c,i)=>`<span style="display:inline-block;margin-right:4px">${i+1}. ${c.name}</span>`).join('<span style="color:var(--teal);opacity:0.5"> → </span>')}
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-teal" style="flex:1;padding:8px" onclick="openGoogleMaps()">
+        🗺️ Googleマップで開く
+      </button>
+      <button class="btn" id="copyUrlBtn" style="flex:1;padding:8px;border-color:var(--teal-border);color:var(--teal)" onclick="copyMapUrl()">
+        🔗 URLをコピー
+      </button>
+    </div>
+  </div>` : ''}
+
+  ${myCustomers.length===0 ? '<div class="card empty">本日のルートはまだ割り当てられていません</div>' : ''}
+  ${myCustomers.map((c,i) => {
+    const rec = records[c.id];
+    return `<div class="visit-card ${rec.done?'done':''}">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
+        <div class="order-num">${i+1}</div>
+        <div style="flex:1">
+          <div class="visit-name">${c.name}</div>
+          <div class="visit-addr">📍 ${c.address}</div>
+        </div>
+        <button class="check-btn ${rec.done?'done':''}" onclick="toggleDone(${c.id})">${rec.done?'✅ 完了済み':'○ 完了にする'}</button>
+      </div>
+      <div>
+        <select class="type-select" onchange="setType(${c.id},this.value)">
+          <option value="delivery" ${rec.type==='delivery'?'selected':''}>📦 配達</option>
+          <option value="pickup" ${rec.type==='pickup'?'selected':''}>🔄 引取</option>
+          <option value="bring" ${rec.type==='bring'?'selected':''}>📂 持込</option>
+        </select>
+      </div>
+      <textarea class="note-input" rows="2" placeholder="内容・メモを入力..." onchange="setNote(${c.id},this.value)">${rec.note}</textarea>
+    </div>`;
+  }).join('')}
+  ${myCustomers.length>0 ? `<button class="btn btn-teal" style="width:100%;margin-top:8px;padding:10px" onclick="submitReport(this)">📤 日報を送信</button>` : ''}`;
+}
+
+function toggleDone(id) { records[id].done = !records[id].done; showPage('myroute'); }
+function setType(id, val) { records[id].type = val; }
+function setNote(id, val) { records[id].note = val; }
+function submitReport(btn) {
+  btn.textContent = '✅ 送信しました！お疲れ様でした。';
+  btn.style.background = 'var(--green)';
+  btn.disabled = true;
+  setTimeout(()=>{ btn.textContent='📤 日報を送信'; btn.style.background=''; btn.disabled=false; }, 3000);
+}
+
+// === 初期化 ===
+renderSidebar();
+showPage('dashboard');
+</script>
+</body>
+</html>
